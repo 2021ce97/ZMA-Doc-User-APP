@@ -1,7 +1,8 @@
-import React from 'react';
-import { Search, MapPin, Bell, ChevronLeft, Star, Clock, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, MapPin, Bell, ChevronLeft, ChevronRight, Star, Clock, Heart } from 'lucide-react';
 import { DOCTORS, CATEGORIES } from '../../data/mockData';
 import * as Icons from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface HomeScreenProps {
   onNavigate: (screen: 'doctor_profile' | 'search' | 'pharmacies', params?: any) => void;
@@ -10,6 +11,14 @@ interface HomeScreenProps {
 }
 
 export function HomeScreen({ onNavigate, favorites, onToggleFavorite }: HomeScreenProps) {
+  const { t, isRtl } = useLanguage();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="flex flex-col pb-8">
       {/* Header */}
@@ -39,7 +48,7 @@ export function HomeScreen({ onNavigate, favorites, onToggleFavorite }: HomeScre
             <div className="text-[10px] text-sky-200">موقعیت فعلی</div>
             <div className="text-sm font-semibold text-white">مزارشریف، کارته صلح</div>
           </div>
-          <ChevronLeft size={18} className="text-sky-300" />
+          {isRtl ? <ChevronLeft size={18} className="text-sky-300" /> : <ChevronRight size={18} className="text-sky-300" />}
         </div>
       </div>
 
@@ -50,13 +59,13 @@ export function HomeScreen({ onNavigate, favorites, onToggleFavorite }: HomeScre
           className="w-full bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-slate-100 p-4 flex items-center gap-3"
         >
           <Search size={20} className="text-slate-400" />
-          <span className="text-slate-400 text-sm font-medium">جستجوی داکتر، شفاخانه یا بیماری...</span>
+          <span className="text-slate-400 text-sm font-medium">{t('search_placeholder')}</span>
         </button>
       </div>
 
       {/* Quick Categories */}
       <div className="px-5 mt-8">
-        <h2 className="text-sm font-bold text-slate-800 mb-4">خدمات صحی (Services)</h2>
+        <h2 className="text-sm font-bold text-slate-800 mb-4">{t('specialties')} (Services)</h2>
         <div className="grid grid-cols-4 gap-3">
           {CATEGORIES.map((cat) => {
             // @ts-ignore
@@ -77,11 +86,11 @@ export function HomeScreen({ onNavigate, favorites, onToggleFavorite }: HomeScre
       <div className="px-5 mt-8">
         <div className="bg-gradient-to-r from-sky-600 to-indigo-700 rounded-2xl p-5 text-white flex items-center justify-between shadow-lg shadow-sky-600/20 relative overflow-hidden">
         <div className="absolute end-0 top-0 w-24 h-24 bg-white/10 rounded-full translate-x-8 -translate-y-8 blur-lg"></div>
-           <div className="relative z-10 w-2/3">
-             <h3 className="font-bold text-base mb-1">دستیار هوشمند صحی</h3>
-             <p className="text-xs text-sky-100 mb-3 leading-relaxed">بررسی علایم بیماری به زبان‌های دری و پشتو به صورت رایگان.</p>
+           <div className="relative z-10 w-2/3 text-start">
+             <h3 className="font-bold text-base mb-1">{t('ai_assistant')}</h3>
+             <p className="text-xs text-sky-100 mb-3 leading-relaxed">{t('ai_desc')}</p>
              <button className="bg-white text-sky-700 text-xs font-bold px-4 py-2 rounded-lg shadow-sm">
-               شروع گفتگو (Start)
+               {t('start_chat')}
              </button>
            </div>
            <div className="text-5xl drop-shadow-md">🤖</div>
@@ -91,12 +100,29 @@ export function HomeScreen({ onNavigate, favorites, onToggleFavorite }: HomeScre
       {/* Top Doctors */}
       <div className="mt-8">
         <div className="px-5 flex justify-between items-center mb-4">
-          <h2 className="text-sm font-bold text-slate-800">برترین داکتران آفلاین (Cached)</h2>
-          <button className="text-[11px] font-bold text-sky-600">مشاهده همه</button>
+          <h2 className="text-sm font-bold text-slate-800">{t('top_doctors')}</h2>
+          <button className="text-[11px] font-bold text-sky-600">{t('see_all')}</button>
         </div>
         
         <div className="flex overflow-x-auto gap-4 px-5 pb-4 snap-x hide-scrollbar">
-          {DOCTORS.map((doctor) => {
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="bg-white rounded-2xl p-4 min-w-[240px] shadow-sm border border-slate-100 snap-center relative animate-pulse">
+                <div className="flex gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-200"></div>
+                  <div className="flex-1 space-y-2 py-1">
+                    <div className="h-4 bg-slate-200 rounded w-2/3"></div>
+                    <div className="h-3 bg-slate-100 rounded w-1/2"></div>
+                  </div>
+                </div>
+                <div className="h-3 bg-slate-100 rounded w-3/4 mb-4"></div>
+                <div className="flex justify-between border-t border-slate-50 pt-3">
+                  <div className="h-6 bg-slate-100 rounded w-12"></div>
+                  <div className="h-6 bg-slate-100 rounded w-16"></div>
+                </div>
+              </div>
+            ))
+          ) : DOCTORS.map((doctor) => {
             const isFav = favorites.includes(doctor.id);
             return (
             <button 

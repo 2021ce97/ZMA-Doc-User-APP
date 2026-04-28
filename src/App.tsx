@@ -7,6 +7,9 @@ import { BottomNav } from './components/patient/BottomNav';
 import { PharmacyScreen } from './components/patient/PharmacyScreen';
 import { ProfileScreen } from './components/patient/ProfileScreen';
 import { SearchScreen } from './components/patient/SearchScreen';
+import { BlogScreen } from './components/patient/BlogScreen';
+import { AppointmentsScreen } from './components/patient/AppointmentsScreen';
+import { useLanguage } from './contexts/LanguageContext';
 
 type Screen = 
   | { name: 'tabs'; tab: string }
@@ -18,6 +21,7 @@ type Screen =
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'tabs', tab: 'home' });
   const [favorites, setFavorites] = useState<string[]>([]);
+  const { isRtl } = useLanguage();
 
   const toggleFavorite = (id: string) => {
     setFavorites(prev => 
@@ -41,19 +45,9 @@ export default function App() {
                   onToggleFavorite={toggleFavorite}
                 />
               )}
-              {screen.tab === 'appointments' && (
-                <div className="flex items-center justify-center h-full text-slate-500 flex-col gap-4">
-                  <div className="text-6xl">📅</div>
-                  <p>نوبت‌های اخیر شما خالی است</p>
-                </div>
-              )}
+              {screen.tab === 'appointments' && <AppointmentsScreen />}
               {screen.tab === 'ai' && <AIChatScreen />}
-              {screen.tab === 'records' && (
-                 <div className="flex items-center justify-center h-full text-slate-500 flex-col gap-4">
-                  <div className="text-6xl">📁</div>
-                  <p>نسخه‌های طبی شما در اینجا قرار میگیرند</p>
-                </div>
-              )}
+              {screen.tab === 'blog' && <BlogScreen />}
               {screen.tab === 'profile' && (
                 <ProfileScreen 
                   favorites={favorites}
@@ -114,10 +108,10 @@ export default function App() {
       {/* Mobile Wrapper */}
       <div 
         className="w-full max-w-[400px] h-full sm:h-[800px] bg-slate-50 sm:rounded-[2.5rem] sm:shadow-2xl overflow-hidden relative flex flex-col font-sans sm:border-[8px] sm:border-slate-800"
-        dir="rtl"
+        dir={isRtl ? 'rtl' : 'ltr'}
       >
         {/* Status Bar Mock (Desktop only) */}
-        <div className="hidden sm:flex bg-slate-900 text-slate-200 text-[10px] px-5 py-1.5 justify-between items-center z-50 shrink-0 font-mono tracking-widest">
+        <div className="hidden sm:flex bg-slate-900 text-slate-200 text-[10px] px-5 py-1.5 justify-between items-center z-50 shrink-0 font-mono tracking-widest" dir="ltr">
            <span>12:00</span>
            <div className="flex items-center gap-1.5 opacity-80">
               <div className="flex gap-[1px]">
@@ -126,7 +120,7 @@ export default function App() {
                  <div className="w-1 h-2.5 bg-white rounded-sm"></div>
                  <div className="w-1 h-3 bg-white/40 rounded-sm"></div>
               </div>
-              <span className="font-bold ml-1">3G</span>
+              <span className="font-bold ms-1">3G</span>
               <div className="w-4 h-2.5 rounded-sm border border-white relative flex items-center p-[1px]">
                  <div className="w-full h-full bg-white rounded-sm"></div>
                  <div className="w-[1px] h-1 bg-white absolute -left-0.5 rounded-l-sm"></div>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Home, Calendar, BrainCircuit, FileText, User } from 'lucide-react';
+import { Home, Calendar, BrainCircuit, BookOpen, User } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface BottomNavProps {
   activeTab: string;
@@ -7,12 +8,14 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
+  const { t } = useLanguage();
+
   const tabs = [
-    { id: 'home', label: 'خانه', icon: Home },
-    { id: 'appointments', label: 'نوبت ها', icon: Calendar },
-    { id: 'ai', label: 'هوش مصنوعی', icon: BrainCircuit },
-    { id: 'records', label: 'سوابق', icon: FileText },
-    { id: 'profile', label: 'حساب', icon: User },
+    { id: 'home', label: t('home'), icon: Home },
+    { id: 'appointments', label: t('appointments'), icon: Calendar },
+    { id: 'ai', label: t('ai_assistant'), icon: BrainCircuit },
+    { id: 'blog', label: t('blog'), icon: BookOpen },
+    { id: 'profile', label: t('profile'), icon: User },
   ];
 
   return (

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Search, ChevronRight, MapPin, Star, Clock, Filter, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, ChevronRight, ChevronLeft, MapPin, Star, Clock, Filter, Heart } from 'lucide-react';
 import { DOCTORS } from '../../data/mockData';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface SearchScreenProps {
   onBack: () => void;
@@ -12,16 +13,42 @@ interface SearchScreenProps {
 export function SearchScreen({ onBack, onDoctorSelect, favorites, onToggleFavorite }: SearchScreenProps) {
   const [query, setQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('همه');
+  const [isLoading, setIsLoading] = useState(true);
+  const { t, isRtl } = useLanguage();
 
-  const tags = ['همه', 'کابل', 'هرات', 'مزارشریف', 'قلب', 'اطفال', 'فشار خون', 'سردرد', 'دیابت'];
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, [query, selectedFilter]);
+
+  const tags = ['همه', 'نزدیک من', 'کابل', 'هرات', 'مزارشریف', 'قلب', 'اطفال', 'فشار خون', 'سردرد', 'دیابت'];
+
+  const normalize = (text: string) => {
+    if (!text) return '';
+    return text.toLowerCase()
+      .replace(/ي/g, 'ی')
+      .replace(/ك/g, 'ک')
+      .replace(/ؤ/g, 'و')
+      .replace(/آ/g, 'ا')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
 
   const results = DOCTORS.filter(d => {
-    const searchStr = `${d.name} ${d.specialty} ${d.hospital} ${d.city} ${(d.diseases||[]).join(' ')} ${(d.symptoms||[]).join(' ')}`.toLowerCase();
-    const matchesQuery = searchStr.includes(query.toLowerCase());
+    const rawSearchStr = `${d.name} ${d.specialty} ${d.hospital} ${d.city} ${(d.diseases||[]).join(' ')} ${(d.symptoms||[]).join(' ')}`;
+    const searchStr = normalize(rawSearchStr);
+    const normalizedQuery = normalize(query);
+    const matchesQuery = searchStr.includes(normalizedQuery);
     
     let matchesFilter = true;
     if (selectedFilter !== 'همه') {
-      matchesFilter = searchStr.includes(selectedFilter.toLowerCase());
+      if (selectedFilter === 'نزدیک من') {
+        // Just mock some nearby doctors for now
+        matchesFilter = d.city === 'کابل'; 
+      } else {
+        matchesFilter = searchStr.includes(normalize(selectedFilter));
+      }
     }
 
     return matchesQuery && matchesFilter;
@@ -32,9 +59,9 @@ export function SearchScreen({ onBack, onDoctorSelect, favorites, onToggleFavori
       {/* Header */}
       <div className="bg-white flex items-center justify-between p-4 sticky top-0 z-20 shadow-sm border-b border-slate-200">
         <button onClick={onBack} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200">
-          <ChevronRight size={24} className="text-slate-700" />
+          {isRtl ? <ChevronRight size={24} className="text-slate-700" /> : <ChevronLeft size={24} className="text-slate-700" />}
         </button>
-        <h1 className="font-bold text-slate-900">جستجوی پیشرفته</h1>
+        <h1 className="font-bold text-slate-900">{t('advanced_search')}</h1>
         <div className="w-10"></div>
       </div>
 
@@ -44,7 +71,7 @@ export function SearchScreen({ onBack, onDoctorSelect, favorites, onToggleFavori
             <input 
               type="text" 
               autoFocus
-              placeholder="جستجوی داکتر، شهر، بیماری یا علایم..."
+              placeholder={t('search_placeholder')}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 pe-11 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -73,12 +100,29 @@ export function SearchScreen({ onBack, onDoctorSelect, favorites, onToggleFavori
         </div>
 
         <div className="p-4 space-y-3">
-          {results.length === 0 && (
+          {isLoading ? (
+             Array.from({ length: 4 }).map((_, idx) => (
+                <div key={idx} className="bg-white w-full rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col relative animate-pulse">
+                   <div className="flex gap-3 mb-3">
+                     <div className="w-12 h-12 rounded-xl bg-slate-200"></div>
+                     <div className="flex-1 py-1">
+                        <div className="h-4 bg-slate-200 rounded w-1/3 mb-2"></div>
+                        <div className="h-3 bg-slate-100 rounded w-1/4"></div>
+                     </div>
+                   </div>
+                   <div className="h-3 bg-slate-100 rounded w-3/4 mb-3"></div>
+                   <div className="flex items-center justify-between border-t border-slate-50 pt-3 mt-1">
+                     <div className="h-5 bg-slate-100 rounded w-12"></div>
+                     <div className="h-5 bg-slate-100 rounded w-20"></div>
+                   </div>
+                </div>
+             ))
+          ) : results.length === 0 ? (
             <div className="text-center py-10 text-slate-500 text-sm">
-              نتیجه‌ای یافت نشد.
+              {t('no_results')}
             </div>
-          )}
-          {results.map(doctor => {
+          ) : (
+          results.map(doctor => {
             const isFav = favorites.includes(doctor.id);
             return (
               <button 
@@ -120,7 +164,7 @@ export function SearchScreen({ onBack, onDoctorSelect, favorites, onToggleFavori
                 </div>
               </button>
             );
-          })}
+          }))}
         </div>
       </div>
     </div>
