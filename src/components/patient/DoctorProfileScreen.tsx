@@ -13,7 +13,7 @@ interface DoctorProfileScreenProps {
 
 export function DoctorProfileScreen({ doctorId, onBack, onBook, isFavorite, onToggleFavorite }: DoctorProfileScreenProps) {
   const doctor = DOCTORS.find(d => d.id === doctorId);
-  const { t, isRtl } = useLanguage();
+  const { t, isRtl, lang } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -156,11 +156,11 @@ export function DoctorProfileScreen({ doctorId, onBack, onBook, isFavorite, onTo
               const isAvail = availableDays.has(day.id);
               return (
                  <div key={day.id} className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] text-slate-500 font-bold">{isRtl ? day.labelFa : day.labelEn}</span>
+                    <span className={`text-[10px] font-bold ${isAvail ? 'text-slate-700' : 'text-slate-400'}`}>{isRtl ? day.labelFa : day.labelEn}</span>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors ${
                        isAvail 
                         ? 'border-sky-200 bg-sky-100 text-sky-700 shadow-sm' 
-                        : 'border-slate-100 bg-white text-slate-300'
+                        : 'border-slate-100 bg-white text-slate-200 opacity-50'
                     }`}>
                        {isAvail ? <div className="w-2 h-2 rounded-full bg-sky-500"></div> : <div className="w-1.5 h-0.5 rounded-full bg-slate-200"></div>}
                     </div>
@@ -168,7 +168,32 @@ export function DoctorProfileScreen({ doctorId, onBack, onBook, isFavorite, onTo
               )
            })}
         </div>
+        <div className="mt-3 flex justify-center gap-4 text-[10px] text-slate-500 font-medium">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-sky-500"></div> {lang === 'en' ? 'Available' : 'روزهای حضور'}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-0.5 rounded-full bg-slate-300"></div> {lang === 'en' ? 'Unavailable' : 'روزهای عدم حضور'}
+          </div>
+        </div>
       </div>
+
+      {/* Skills / Areas of Expertise */}
+      {doctor.skills && doctor.skills.length > 0 && (
+        <div className="p-5 pb-0">
+          <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+             <Award size={16} className="text-purple-600" />
+             {lang === 'en' ? 'Skills & Expertise' : 'مهارت‌ها و تخصص‌ها'}
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {doctor.skills.map((skill, idx) => (
+              <span key={idx} className="bg-purple-50 text-purple-700 border border-purple-100 px-3 py-1.5 rounded-lg text-xs font-medium">
+                {lang === 'en' ? skill : skill} {/* Assume English translating skills separately if needed, leave as is for now */}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Affiliations & Timings */}
       <div className="p-5 pb-0">
@@ -181,7 +206,7 @@ export function DoctorProfileScreen({ doctorId, onBack, onBook, isFavorite, onTo
             <div key={idx} className="p-4 flex flex-col gap-3 hover:bg-slate-50 transition-colors">
               <div className="flex justify-between items-start">
                  <div className="font-bold text-sm text-slate-900">{timing.clinic}</div>
-                 <div className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">فعال</div>
+                 <div className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">{lang === 'en' ? 'Active' : 'فعال'}</div>
               </div>
               
               <div className="flex flex-wrap gap-2">
@@ -216,7 +241,7 @@ export function DoctorProfileScreen({ doctorId, onBack, onBook, isFavorite, onTo
             <div className="absolute inset-0 bg-sky-50 opacity-50 pattern-grid"></div>
             <div className="relative bg-white/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 z-10 shadow-sm">
                <MapPin size={12} className="text-rose-500" />
-               جهت ذخیره اینترنت نقشه غیرفعال است
+               {lang === 'en' ? 'Map disabled to save data' : 'جهت ذخیره اینترنت نقشه غیرفعال است'}
             </div>
           </div>
           <div className="p-4">
@@ -227,7 +252,7 @@ export function DoctorProfileScreen({ doctorId, onBack, onBook, isFavorite, onTo
             </div>
             <div className="text-sm text-slate-500 mt-2 flex items-start gap-2">
               <CreditCard size={16} className="text-slate-400 shrink-0 mt-0.5" />
-              <span>فیس معاینه: <strong className="text-slate-900 text-base">{doctor.fees} AFN</strong></span>
+              <span>{lang === 'en' ? 'Consultation Fee: ' : 'فیس معاینه: '}<strong className="text-slate-900 text-base">{doctor.fees} AFN</strong></span>
             </div>
           </div>
         </div>

@@ -73,6 +73,16 @@ export const translations: Translations = {
   reminder_settings: { en: 'Appointment Reminders', da: 'یادآوری نوبت‌ها', ps: 'د نوبت یادونې' },
   blog_settings: { en: 'New Blog Articles', da: 'مقالات جدید بلاگ', ps: 'د بلاګ نوې مقالې' },
   ai_settings: { en: 'AI Messages', da: 'پیام‌های هوش مصنوعی', ps: 'د AI پیغامونه' },
+  offline_banner: { en: 'You are offline (Cached data available)', da: 'شما آفلاین هستید (دسترسی به اطلاعات ذخیره شده)', ps: 'تاسو آفلاین یاست (خوندي شوي معلومات شتون لري)' },
+  onboarding_title: { en: 'Welcome to our App', da: 'به اپلیکیشن ما خوش آمدید', ps: 'زموږ کاریال ته ښه راغلاست' },
+  onboarding_desc: { en: 'Find the best doctors, book appointments easily, and use our AI health assistant in Dari and Pashto.', da: 'بهترین داکتران را پیدا کنید، به راحتی نوبت بگیرید و از دستیار هوشمند صحی ما به زبان‌های دری و پشتو استفاده کنید.', ps: 'غوره ډاکټران ومومئ، په اسانۍ سره نوبت ونیسئ او زموږ روغتیایی AI مرستیال په پښتو او دري کې وکاروئ.' },
+  onboarding_start: { en: 'Get Started', da: 'شروع کنید', ps: 'پیل کړئ' },
+  dark_mode: { en: 'Dark Mode', da: 'حالت تاریک (Dark Mode)', ps: 'تیاره حالت (Dark Mode)' },
+  near_me: { en: 'Near me', da: 'نزدیک من', ps: 'زما سره نږدې' },
+  today_tomorrow: { en: 'Today/Tomorrow', da: 'امروز/فردا', ps: 'نن/سبا' },
+  availability_today: { en: 'Today', da: 'امروز', ps: 'نن' },
+  availability_tomorrow: { en: 'Tomorrow', da: 'فردا', ps: 'سبا' },
+  online_booking: { en: 'Online Booking', da: 'نوبت آنلاین', ps: 'انلاین نوبت' },
 };
 
 interface LanguageContextType {
