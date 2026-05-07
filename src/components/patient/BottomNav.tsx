@@ -1,6 +1,6 @@
-import React from 'react';
-import { Home, Calendar, BrainCircuit, BookOpen, User } from 'lucide-react';
-import { useLanguage } from '../../contexts/LanguageContext';
+import React from "react";
+import { Home, Calendar, BrainCircuit, BookOpen, User } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface BottomNavProps {
   activeTab: string;
@@ -11,11 +11,11 @@ export function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
   const { t } = useLanguage();
 
   const tabs = [
-    { id: 'home', label: t('home'), icon: Home },
-    { id: 'appointments', label: t('appointments'), icon: Calendar },
-    { id: 'ai', label: t('ai_assistant'), icon: BrainCircuit },
-    { id: 'blog', label: t('blog'), icon: BookOpen },
-    { id: 'profile', label: t('profile'), icon: User },
+    { id: "home", label: t("home"), icon: Home },
+    { id: "appointments", label: t("appointments"), icon: Calendar },
+    { id: "ai", label: t("ai_assistant"), icon: BrainCircuit },
+    { id: "blog", label: t("blog"), icon: BookOpen },
+    { id: "profile", label: t("profile"), icon: User },
   ];
 
   return (
@@ -28,13 +28,17 @@ export function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
             key={tab.id}
             onClick={() => onChangeTab(tab.id)}
             className={`flex flex-col items-center justify-center w-16 h-full transition-colors duration-200 ${
-              isActive ? 'text-sky-600' : 'text-slate-400 hover:text-slate-600'
+              isActive ? "text-sky-600" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <div className={`p-1 rounded-full transition-colors ${isActive ? 'bg-sky-50' : 'bg-transparent'}`}>
+            <div
+              className={`p-1 rounded-full transition-colors ${isActive ? "bg-sky-50" : "bg-transparent"}`}
+            >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            <span className={`text-[10px] mt-1 font-medium ${isActive ? 'font-bold' : ''}`}>
+            <span
+              className={`text-[10px] mt-1 font-medium ${isActive ? "font-bold" : ""}`}
+            >
               {tab.label}
             </span>
           </button>

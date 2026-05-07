@@ -14,7 +14,11 @@
     display: none; /* Chrome, Safari and Opera */
   }
   .pattern-grid {
-    background-image: radial-gradient(circle at 1px 1px, #cbd5e1 1px, transparent 0);
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      #cbd5e1 1px,
+      transparent 0
+    );
     background-size: 24px 24px;
   }
 }
