@@ -18,7 +18,7 @@ import {
   Tag,
   Clock,
   MessageSquare,
-  Share2
+  Share2,
 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { triggerHaptic } from "../../utils/haptics";
@@ -65,7 +65,9 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"chat" | "insights">("chat");
   const [insightSearchQuery, setInsightSearchQuery] = useState("");
-  const [insightDateFilter, setInsightDateFilter] = useState<"all" | "week" | "month">("all");
+  const [insightDateFilter, setInsightDateFilter] = useState<
+    "all" | "week" | "month"
+  >("all");
 
   // Insights Tags extraction hook
   const insights = useMemo(() => {
@@ -74,42 +76,126 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
       .map((msg) => {
         const text = msg.text.toLowerCase();
         const tags: string[] = [];
-        if (text.includes("fever") || text.includes("تب")) tags.push(lang === "en" ? "Fever" : "تب");
-        if (text.includes("pain") || text.includes("درد")) tags.push(lang === "en" ? "Pain/Discomfort" : "درد");
-        if (text.includes("doctor") || text.includes("appointment") || text.includes("داکتر")) tags.push(lang === "en" ? "Consult Doctor" : "مراجعه به داکتر");
-        if (text.includes("water") || text.includes("hydration") || text.includes("آب")) tags.push(lang === "en" ? "Hydration" : "مایعات");
-        if (text.includes("cough") || text.includes("سرفه")) tags.push(lang === "en" ? "Cough" : "سرفه");
-        if (text.includes("allergy") || text.includes("حساسیت")) tags.push(lang === "en" ? "Allergy" : "حساسیت");
-        if (text.includes("medication") || text.includes("دارو") || text.includes("دوا")) tags.push(lang === "en" ? "Medication" : "دارو/دوا");
-        if (tags.length === 0) tags.push(lang === "en" ? "General Advice" : "توصیه عمومی");
-        
+        if (
+          text.includes("fever") ||
+          text.includes("تب") ||
+          text.includes("حرارت")
+        )
+          tags.push(lang === "en" ? "Fever" : "تب");
+        if (
+          text.includes("pain") ||
+          text.includes("درد") ||
+          text.includes("ache")
+        )
+          tags.push(lang === "en" ? "Pain/Discomfort" : "درد");
+        if (
+          text.includes("doctor") ||
+          text.includes("appointment") ||
+          text.includes("داکتر") ||
+          text.includes("پزشک")
+        )
+          tags.push(lang === "en" ? "Consult Doctor" : "مراجعه به داکتر");
+        if (
+          text.includes("water") ||
+          text.includes("hydration") ||
+          text.includes("آب") ||
+          text.includes("مایعات") ||
+          text.includes("drink")
+        )
+          tags.push(lang === "en" ? "Hydration" : "مایعات");
+        if (
+          text.includes("cough") ||
+          text.includes("سرفه") ||
+          text.includes("خس خس") ||
+          text.includes("chest")
+        )
+          tags.push(lang === "en" ? "Cough/Respiratory" : "سرفه/تنفسی");
+        if (
+          text.includes("allergy") ||
+          text.includes("حساسیت") ||
+          text.includes("آلرژی") ||
+          text.includes("rash")
+        )
+          tags.push(lang === "en" ? "Allergies" : "حساسیت");
+        if (
+          text.includes("medication") ||
+          text.includes("دارو") ||
+          text.includes("دوا") ||
+          text.includes("قرص") ||
+          text.includes("pill")
+        )
+          tags.push(lang === "en" ? "Medication" : "دارو/دوا");
+        if (
+          text.includes("nausea") ||
+          text.includes("تهوع") ||
+          text.includes("vomit") ||
+          text.includes("استفراغ") ||
+          text.includes("stomach")
+        )
+          tags.push(lang === "en" ? "Stomach/Nausea" : "معده/تهوع");
+        if (
+          text.includes("sleep") ||
+          text.includes("خواب") ||
+          text.includes("rest") ||
+          text.includes("استراحت")
+        )
+          tags.push(lang === "en" ? "Rest/Sleep" : "استراحت/خواب");
+        if (
+          text.includes("diet") ||
+          text.includes("غذا") ||
+          text.includes("food") ||
+          text.includes("خوراک") ||
+          text.includes("eat")
+        )
+          tags.push(lang === "en" ? "Diet" : "رژیم غذایی");
+
+        if (tags.length === 0)
+          tags.push(lang === "en" ? "General Advice" : "توصیه عمومی");
+
         return {
           ...msg,
-          tags: Array.from(new Set(tags))
+          tags: Array.from(new Set(tags)),
         };
       })
       .reverse();
   }, [messages, lang]);
 
-  const [selectedTag, setSelectedTag] = useState<string>("All");
+  const [selectedTags, setSelectedTags] = useState<string[]>(() => {
+    const saved = localStorage.getItem("ai_insight_filters");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("ai_insight_filters", JSON.stringify(selectedTags));
+  }, [selectedTags]);
+
+  const handleToggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
 
   const filteredInsights = useMemo(() => {
     let result = insights;
-    
-    if (selectedTag !== "All") {
-      result = result.filter(i => i.tags.includes(selectedTag));
+
+    if (selectedTags.length > 0) {
+      // Must include at least one of the selected tags (OR filtering)
+      // or we can do AND filtering if preferred. Let's do OR for now
+      result = result.filter((i) =>
+        selectedTags.some((tag) => i.tags.includes(tag)),
+      );
     }
-    
+
     if (insightSearchQuery.trim()) {
       const q = insightSearchQuery.toLowerCase();
-      result = result.filter(i => i.text.toLowerCase().includes(q));
+      result = result.filter((i) => i.text.toLowerCase().includes(q));
     }
 
     if (insightDateFilter !== "all") {
       const now = Date.now();
       const oneWeek = 7 * 24 * 60 * 60 * 1000;
       const oneMonth = 30 * 24 * 60 * 60 * 1000;
-      result = result.filter(i => {
+      result = result.filter((i) => {
         if (insightDateFilter === "week") return now - i.id <= oneWeek;
         if (insightDateFilter === "month") return now - i.id <= oneMonth;
         return true;
@@ -117,18 +203,33 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
     }
 
     return result;
-  }, [insights, selectedTag, insightSearchQuery, insightDateFilter]);
+  }, [insights, selectedTags, insightSearchQuery, insightDateFilter]);
 
   const handleShare = async (insight: any) => {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: lang === 'en' ? 'Health Insight' : 'توصیه پزشکی',
+          title: lang === "en" ? "Health Insight" : "توصیه پزشکی",
           text: insight.text,
         });
       } else {
         await navigator.clipboard.writeText(insight.text);
-        alert(lang === 'en' ? 'Copied to clipboard!' : 'در کلیپ‌بورد کپی شد!');
+        alert(lang === "en" ? "Copied to clipboard!" : "در کلیپ‌بورد کپی شد!");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleShareMessage = async (text: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          text: text,
+        });
+      } else {
+        await navigator.clipboard.writeText(text);
+        alert(lang === "en" ? "Copied to clipboard!" : "در کلیپ‌بورد کپی شد!");
       }
     } catch (e) {
       console.error(e);
@@ -147,7 +248,32 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
 
         recognitionRef.current.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
-          setInput((prev) => (prev + " " + transcript).trim());
+          const command = transcript.toLowerCase().trim();
+
+          if (
+            command.includes("clear chat") ||
+            command.includes("پاکسازی چت") ||
+            command.includes("پاک کردن پیام ها")
+          ) {
+            if (
+              window.confirm(
+                lang === "en" ? "Clear chat history?" : "تاریخچه چت پاک شود؟",
+              )
+            ) {
+              setMessages([
+                { id: Date.now(), text: initialMessage, sender: "bot" },
+              ]);
+            }
+          } else if (
+            command.includes("show my insights") ||
+            command.includes("show insights") ||
+            command.includes("نمایش توصیه ها") ||
+            command.includes("توصیه های من")
+          ) {
+            setActiveTab("insights");
+          } else {
+            setInput((prev) => (prev + " " + transcript).trim());
+          }
           setIsListening(false);
         };
 
@@ -188,18 +314,35 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
   };
 
   const handleExport = () => {
-    const historyText = messages
-      .map(
-        (m) => `[${m.sender === "user" ? "User" : "AI Assistant"}]: ${m.text}`,
-      )
-      .join("\n\n");
+    let historyText = "";
+    let filename = "";
+
+    if (activeTab === "insights") {
+      historyText = filteredInsights
+        .map(
+          (m) =>
+            `[${new Date(m.id).toLocaleString(lang === "en" ? "en-US" : "fa-IR")}]\nTags: ${m.tags.join(", ")}\nInsight: ${m.text}`,
+        )
+        .join("\n\n-------------------\n\n");
+      filename = "health-insights.txt";
+    } else {
+      historyText = messages
+        .map(
+          (m) =>
+            `[${new Date(m.id).toLocaleString(lang === "en" ? "en-US" : "fa-IR")}] ${m.sender === "user" ? "User" : "AI Assistant"}: ${m.text}`,
+        )
+        .join("\n\n");
+      filename = "health-chat-history.txt";
+    }
+
     const blob = new Blob([historyText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "chat-history.txt";
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+    triggerHaptic("light");
   };
 
   // Real-time sync via BroadcastChannel (simulates WebSockets)
@@ -478,85 +621,112 @@ Assistant:`;
             <div className="relative">
               <input
                 type="text"
-                placeholder={lang === "en" ? "Search insights..." : "جستجو در توصیه‌ها..."}
+                placeholder={
+                  lang === "en" ? "Search insights..." : "جستجو در توصیه‌ها..."
+                }
                 value={insightSearchQuery}
                 onChange={(e) => setInsightSearchQuery(e.target.value)}
                 className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl py-2 px-4 pe-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 dark:text-white transition-colors"
                 dir={isRtl ? "rtl" : "ltr"}
               />
-              <Search size={16} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${isRtl ? 'left-3' : 'right-3'}`} />
+              <Search
+                size={16}
+                className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${isRtl ? "left-3" : "right-3"}`}
+              />
             </div>
-            
+
             <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-              <select 
-                value={insightDateFilter} 
+              <select
+                value={insightDateFilter}
                 onChange={(e) => setInsightDateFilter(e.target.value as any)}
                 className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none shrink-0"
               >
-                 <option value="all">{lang === "en" ? "All Time" : "همه زمان‌ها"}</option>
-                 <option value="week">{lang === "en" ? "Past Week" : "هفته گذشته"}</option>
-                 <option value="month">{lang === "en" ? "Past Month" : "ماه گذشته"}</option>
+                <option value="all">
+                  {lang === "en" ? "All Time" : "همه زمان‌ها"}
+                </option>
+                <option value="week">
+                  {lang === "en" ? "Past Week" : "هفته گذشته"}
+                </option>
+                <option value="month">
+                  {lang === "en" ? "Past Month" : "ماه گذشته"}
+                </option>
               </select>
 
               <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
 
               <button
-                onClick={() => setSelectedTag("All")}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTag === "All" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
+                onClick={() => setSelectedTags([])}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTags.length === 0 ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
               >
                 {lang === "en" ? "All Insights" : "همه"}
               </button>
-              {Array.from(new Set(insights.flatMap(i => i.tags))).map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => setSelectedTag(tag)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTag === tag ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
-                >
-                  {tag}
-                </button>
-              ))}
+              {Array.from(new Set(insights.flatMap((i) => i.tags))).map(
+                (tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => handleToggleTag(tag)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTags.includes(tag) ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
+                  >
+                    {tag}
+                  </button>
+                ),
+              )}
             </div>
           </div>
 
           <div className="space-y-4">
             {filteredInsights.length === 0 ? (
-               <div className="text-center py-10 opacity-50 flex flex-col items-center">
-                 <Bot size={48} className="mb-4 text-slate-400" />
-                 <p className="text-slate-500 dark:text-slate-400">
-                   {lang === "en" ? "No insights found." : "توصیه‌ای یافت نشد."}
-                 </p>
-               </div>
+              <div className="text-center py-10 opacity-50 flex flex-col items-center">
+                <Bot size={48} className="mb-4 text-slate-400" />
+                <p className="text-slate-500 dark:text-slate-400">
+                  {lang === "en" ? "No insights found." : "توصیه‌ای یافت نشد."}
+                </p>
+              </div>
             ) : (
               filteredInsights.map((insight) => (
-                <div key={insight.id} className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                <div
+                  key={insight.id}
+                  className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700"
+                >
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                      <Stethoscope size={16} className="text-emerald-600 dark:text-emerald-400" />
+                      <Stethoscope
+                        size={16}
+                        className="text-emerald-600 dark:text-emerald-400"
+                      />
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-start gap-2 mb-2">
                         <div className="flex gap-1.5 flex-wrap">
-                          {insight.tags.map(tag => (
-                            <span key={tag} className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md text-[10px] font-medium">
+                          {insight.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md text-[10px] font-medium"
+                            >
                               <Tag size={10} />
                               {tag}
                             </span>
                           ))}
                         </div>
-                        <button 
+                        <button
                           onClick={() => handleShare(insight)}
                           className="shrink-0 p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 bg-slate-50 dark:bg-slate-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-md transition-colors"
-                          title={lang === 'en' ? 'Share' : 'اشتراک‌گذاری'}
+                          title={lang === "en" ? "Share" : "اشتراک‌گذاری"}
                         >
                           <Share2 size={14} />
                         </button>
                       </div>
-                      <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{insight.text}</p>
+                      <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                        {insight.text}
+                      </p>
                     </div>
                   </div>
                   <div className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-2 pt-2 border-t border-slate-50 dark:border-slate-700/50 justify-end">
                     <Clock size={12} />
-                    {new Date(insight.id).toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR', { dateStyle: 'medium', timeStyle: 'short' })}
+                    {new Date(insight.id).toLocaleString(
+                      lang === "en" ? "en-US" : "fa-IR",
+                      { dateStyle: "medium", timeStyle: "short" },
+                    )}
                   </div>
                 </div>
               ))
@@ -566,133 +736,142 @@ Assistant:`;
       ) : (
         <>
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 relative bg-slate-50 dark:bg-slate-900 transition-colors">
-        {/* Optimization Notice */}
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-2.5 text-[11px] text-amber-700 dark:text-amber-400 text-center mx-auto w-3/4 shadow-sm z-10 transition-colors">
-          {lang === "en"
-            ? "AI responses are generated. Avoid sharing exact PII."
-            : isRtl && lang === "ps"
-              ? "د AI ځوابونه جوړ شوي دي. ریښتیني شخصي معلومات مه شریکوئ."
-              : "پاسخ‌هاتوسط هوش مصنوعی تولید می‌شوند. از اشتراک‌گذاری اطلاعات شخصی بپرهیزید."}
-        </div>
-
-        {filteredMessages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex max-w-[90%] relative z-10 ${msg.sender === "user" ? "self-end flex-row-reverse" : "self-start"}`}
-          >
-            <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.sender === "user" ? "bg-slate-200 dark:bg-slate-700 ms-3" : "bg-gradient-to-tr from-teal-500 to-emerald-500 me-3"}`}
-            >
-              {msg.sender === "user" ? (
-                <User
-                  size={18}
-                  className="text-slate-600 dark:text-slate-300"
-                />
-              ) : (
-                <Bot size={18} className="text-white" />
-              )}
+            {/* Optimization Notice */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-2.5 text-[11px] text-amber-700 dark:text-amber-400 text-center mx-auto w-3/4 shadow-sm z-10 transition-colors">
+              {lang === "en"
+                ? "AI responses are generated. Avoid sharing exact PII."
+                : isRtl && lang === "ps"
+                  ? "د AI ځوابونه جوړ شوي دي. ریښتیني شخصي معلومات مه شریکوئ."
+                  : "پاسخ‌هاتوسط هوش مصنوعی تولید می‌شوند. از اشتراک‌گذاری اطلاعات شخصی بپرهیزید."}
             </div>
-            <div
-              className={`p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm flex flex-col ${
-                msg.sender === "user"
-                  ? "bg-sky-600 dark:bg-sky-700 border border-sky-500 dark:border-sky-600 text-white rounded-se-sm"
-                  : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-ss-sm shadow-[0_4px_14px_rgba(0,0,0,0.05)]"
-              }`}
-            >
-              <span>{msg.text}</span>
-              {msg.sender === "user" && msg.status && (
+
+            {filteredMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex max-w-[90%] relative z-10 ${msg.sender === "user" ? "self-end flex-row-reverse" : "self-start"}`}
+              >
                 <div
-                  className={`flex justify-end mt-1 opacity-70 ${isRtl ? "me-auto ms-0" : "ms-auto me-0"}`}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.sender === "user" ? "bg-slate-200 dark:bg-slate-700 ms-3" : "bg-gradient-to-tr from-teal-500 to-emerald-500 me-3"}`}
                 >
-                  {msg.status === "sent" && <Check size={14} />}
-                  {msg.status === "delivered" && <CheckCheck size={14} />}
-                  {msg.status === "read" && (
-                    <CheckCheck size={14} className="text-emerald-300" />
+                  {msg.sender === "user" ? (
+                    <User
+                      size={18}
+                      className="text-slate-600 dark:text-slate-300"
+                    />
+                  ) : (
+                    <Bot size={18} className="text-white" />
                   )}
                 </div>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {isTyping && (
-          <div className="flex max-w-[85%] self-start relative z-10">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-teal-500 to-emerald-500 flex items-center justify-center shrink-0 shadow-sm me-3">
-              <Bot size={18} className="text-white" />
-            </div>
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-ss-sm flex items-center gap-1.5 shadow-[0_4px_14px_rgba(0,0,0,0.05)] border border-slate-100 dark:border-slate-700">
-              <span className="w-2 h-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce"></span>
-              <span className="w-2 h-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce delay-75"></span>
-              <span className="w-2 h-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce delay-150"></span>
-            </div>
-          </div>
-        )}
-        <div ref={endRef} />
-      </div>
-
-      {/* Input Area */}
-      {activeTab === "chat" && (
-        <div className="bg-white dark:bg-slate-800 p-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-2 z-20 pb-safe transition-colors shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-          {/* Quick Replies */}
-          {!isTyping &&
-            messages.filter((m) => m.sender === "user").length < 2 && (
-              <div className="flex gap-2 mb-1 overflow-x-auto hide-scrollbar pb-1">
-                {quickReplies.map((reply, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSend(reply)}
-                    className="whitespace-nowrap bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full px-4 py-1.5 text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                <div
+                  className={`p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm flex flex-col ${
+                    msg.sender === "user"
+                      ? "bg-sky-600 dark:bg-sky-700 border border-sky-500 dark:border-sky-600 text-white rounded-se-sm"
+                      : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-ss-sm shadow-[0_4px_14px_rgba(0,0,0,0.05)]"
+                  }`}
+                >
+                  <span>{msg.text}</span>
+                  <div
+                    className={`flex justify-end items-center gap-1 mt-1 opacity-70 ${isRtl ? "me-auto ms-0" : "ms-auto me-0"}`}
                   >
-                    {reply}
-                  </button>
-                ))}
+                    <button
+                      onClick={() => handleShareMessage(msg.text)}
+                      className="p-1 cursor-pointer transition-colors"
+                      title={lang === "en" ? "Share" : "اشتراک‌گذاری"}
+                    >
+                      <Share2 size={12} />
+                    </button>
+                    {msg.sender === "user" && msg.status && (
+                      <div className="flex">
+                        {msg.status === "sent" && <Check size={14} />}
+                        {msg.status === "delivered" && <CheckCheck size={14} />}
+                        {msg.status === "read" && (
+                          <CheckCheck size={14} className="text-emerald-300" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {isTyping && (
+              <div className="flex max-w-[85%] self-start relative z-10">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-teal-500 to-emerald-500 flex items-center justify-center shrink-0 shadow-sm me-3">
+                  <Bot size={18} className="text-white" />
+                </div>
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-ss-sm flex items-center gap-1.5 shadow-[0_4px_14px_rgba(0,0,0,0.05)] border border-slate-100 dark:border-slate-700">
+                  <span className="w-2 h-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce"></span>
+                  <span className="w-2 h-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce delay-75"></span>
+                  <span className="w-2 h-2 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce delay-150"></span>
+                </div>
               </div>
             )}
-          <div className="flex gap-2 items-end">
-            <button
-              onClick={toggleListening}
-              className={`w-12 h-12 flex items-center justify-center rounded-2xl shrink-0 transition-colors shadow-md border ${
-                isListening
-                  ? "bg-rose-50 border-rose-200 text-rose-500 animate-pulse dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400"
-                  : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-400"
-              }`}
-            >
-              {isListening ? <MicOff size={22} /> : <Mic size={22} />}
-            </button>
-
-            <textarea
-              placeholder={
-                isListening
-                  ? lang === "en"
-                    ? "Listening..."
-                    : "در حال شنیدن..."
-                  : t("chat_placeholder")
-              }
-              className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none h-14 min-h-[56px] max-h-[140px] text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors shadow-inner"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              dir={isRtl ? "rtl" : "ltr"}
-              disabled={isTyping}
-            />
-            <button
-              onClick={() => handleSend()}
-              disabled={!input.trim() || isTyping}
-              className="w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-700 transition-all active:scale-95"
-            >
-              <Send
-                size={22}
-                className={`${isRtl ? "me-1 rtl:-scale-x-100" : "ms-1"}`}
-              />
-            </button>
+            <div ref={endRef} />
           </div>
-        </div>
-      )}
+
+          {/* Input Area */}
+          {activeTab === "chat" && (
+            <div className="bg-white dark:bg-slate-800 p-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-2 z-20 pb-safe transition-colors shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+              {/* Quick Replies */}
+              {!isTyping &&
+                messages.filter((m) => m.sender === "user").length < 2 && (
+                  <div className="flex gap-2 mb-1 overflow-x-auto hide-scrollbar pb-1">
+                    {quickReplies.map((reply, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSend(reply)}
+                        className="whitespace-nowrap bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full px-4 py-1.5 text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                      >
+                        {reply}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              <div className="flex gap-2 items-end">
+                <button
+                  onClick={toggleListening}
+                  className={`w-12 h-12 flex items-center justify-center rounded-2xl shrink-0 transition-colors shadow-md border ${
+                    isListening
+                      ? "bg-rose-50 border-rose-200 text-rose-500 animate-pulse dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400"
+                      : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-400"
+                  }`}
+                >
+                  {isListening ? <MicOff size={22} /> : <Mic size={22} />}
+                </button>
+
+                <textarea
+                  placeholder={
+                    isListening
+                      ? lang === "en"
+                        ? "Listening..."
+                        : "در حال شنیدن..."
+                      : t("chat_placeholder")
+                  }
+                  className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none h-14 min-h-[56px] max-h-[140px] text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors shadow-inner"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  dir={isRtl ? "rtl" : "ltr"}
+                  disabled={isTyping}
+                />
+                <button
+                  onClick={() => handleSend()}
+                  disabled={!input.trim() || isTyping}
+                  className="w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-700 transition-all active:scale-95"
+                >
+                  <Send
+                    size={22}
+                    className={`${isRtl ? "me-1 rtl:-scale-x-100" : "ms-1"}`}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
