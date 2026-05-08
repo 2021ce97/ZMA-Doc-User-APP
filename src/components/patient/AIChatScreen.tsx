@@ -17,7 +17,8 @@ import {
   BookOpen,
   Tag,
   Clock,
-  MessageSquare
+  MessageSquare,
+  Share2
 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { triggerHaptic } from "../../utils/haptics";
@@ -63,6 +64,8 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"chat" | "insights">("chat");
+  const [insightSearchQuery, setInsightSearchQuery] = useState("");
+  const [insightDateFilter, setInsightDateFilter] = useState<"all" | "week" | "month">("all");
 
   // Insights Tags extraction hook
   const insights = useMemo(() => {
@@ -75,6 +78,9 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
         if (text.includes("pain") || text.includes("درد")) tags.push(lang === "en" ? "Pain/Discomfort" : "درد");
         if (text.includes("doctor") || text.includes("appointment") || text.includes("داکتر")) tags.push(lang === "en" ? "Consult Doctor" : "مراجعه به داکتر");
         if (text.includes("water") || text.includes("hydration") || text.includes("آب")) tags.push(lang === "en" ? "Hydration" : "مایعات");
+        if (text.includes("cough") || text.includes("سرفه")) tags.push(lang === "en" ? "Cough" : "سرفه");
+        if (text.includes("allergy") || text.includes("حساسیت")) tags.push(lang === "en" ? "Allergy" : "حساسیت");
+        if (text.includes("medication") || text.includes("دارو") || text.includes("دوا")) tags.push(lang === "en" ? "Medication" : "دارو/دوا");
         if (tags.length === 0) tags.push(lang === "en" ? "General Advice" : "توصیه عمومی");
         
         return {
@@ -86,6 +92,48 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
   }, [messages, lang]);
 
   const [selectedTag, setSelectedTag] = useState<string>("All");
+
+  const filteredInsights = useMemo(() => {
+    let result = insights;
+    
+    if (selectedTag !== "All") {
+      result = result.filter(i => i.tags.includes(selectedTag));
+    }
+    
+    if (insightSearchQuery.trim()) {
+      const q = insightSearchQuery.toLowerCase();
+      result = result.filter(i => i.text.toLowerCase().includes(q));
+    }
+
+    if (insightDateFilter !== "all") {
+      const now = Date.now();
+      const oneWeek = 7 * 24 * 60 * 60 * 1000;
+      const oneMonth = 30 * 24 * 60 * 60 * 1000;
+      result = result.filter(i => {
+        if (insightDateFilter === "week") return now - i.id <= oneWeek;
+        if (insightDateFilter === "month") return now - i.id <= oneMonth;
+        return true;
+      });
+    }
+
+    return result;
+  }, [insights, selectedTag, insightSearchQuery, insightDateFilter]);
+
+  const handleShare = async (insight: any) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: lang === 'en' ? 'Health Insight' : 'توصیه پزشکی',
+          text: insight.text,
+        });
+      } else {
+        await navigator.clipboard.writeText(insight.text);
+        alert(lang === 'en' ? 'Copied to clipboard!' : 'در کلیپ‌بورد کپی شد!');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -426,47 +474,82 @@ Assistant:`;
 
       {activeTab === "insights" ? (
         <div className="flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900 transition-colors">
-          <div className="flex items-center gap-2 mb-4 overflow-x-auto hide-scrollbar pb-2">
-            <button
-              onClick={() => setSelectedTag("All")}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTag === "All" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
-            >
-              {lang === "en" ? "All Insights" : "همه توصیه‌ها"}
-            </button>
-            {Array.from(new Set(insights.flatMap(i => i.tags))).map(tag => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTag === tag ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
+          <div className="mb-4 space-y-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={lang === "en" ? "Search insights..." : "جستجو در توصیه‌ها..."}
+                value={insightSearchQuery}
+                onChange={(e) => setInsightSearchQuery(e.target.value)}
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl py-2 px-4 pe-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-900 dark:text-white transition-colors"
+                dir={isRtl ? "rtl" : "ltr"}
+              />
+              <Search size={16} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${isRtl ? 'left-3' : 'right-3'}`} />
+            </div>
+            
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              <select 
+                value={insightDateFilter} 
+                onChange={(e) => setInsightDateFilter(e.target.value as any)}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none shrink-0"
               >
-                {tag}
+                 <option value="all">{lang === "en" ? "All Time" : "همه زمان‌ها"}</option>
+                 <option value="week">{lang === "en" ? "Past Week" : "هفته گذشته"}</option>
+                 <option value="month">{lang === "en" ? "Past Month" : "ماه گذشته"}</option>
+              </select>
+
+              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
+              <button
+                onClick={() => setSelectedTag("All")}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTag === "All" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
+              >
+                {lang === "en" ? "All Insights" : "همه"}
               </button>
-            ))}
+              {Array.from(new Set(insights.flatMap(i => i.tags))).map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(tag)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTag === tag ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-4">
-            {insights.filter(i => selectedTag === "All" || i.tags.includes(selectedTag)).length === 0 ? (
+            {filteredInsights.length === 0 ? (
                <div className="text-center py-10 opacity-50 flex flex-col items-center">
                  <Bot size={48} className="mb-4 text-slate-400" />
                  <p className="text-slate-500 dark:text-slate-400">
-                   {lang === "en" ? "No insights found yet." : "هنوز توصیه‌ای ثبت نشده است."}
+                   {lang === "en" ? "No insights found." : "توصیه‌ای یافت نشد."}
                  </p>
                </div>
             ) : (
-              insights.filter(i => selectedTag === "All" || i.tags.includes(selectedTag)).map((insight) => (
+              filteredInsights.map((insight) => (
                 <div key={insight.id} className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
                       <Stethoscope size={16} className="text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div className="flex-1">
-                      <div className="flex gap-1.5 flex-wrap mb-2">
-                        {insight.tags.map(tag => (
-                          <span key={tag} className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md text-[10px] font-medium">
-                            <Tag size={10} />
-                            {tag}
-                          </span>
-                        ))}
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <div className="flex gap-1.5 flex-wrap">
+                          {insight.tags.map(tag => (
+                            <span key={tag} className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md text-[10px] font-medium">
+                              <Tag size={10} />
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => handleShare(insight)}
+                          className="shrink-0 p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 bg-slate-50 dark:bg-slate-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-md transition-colors"
+                          title={lang === 'en' ? 'Share' : 'اشتراک‌گذاری'}
+                        >
+                          <Share2 size={14} />
+                        </button>
                       </div>
                       <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{insight.text}</p>
                     </div>
