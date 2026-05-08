@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Bot,
   User,
@@ -14,6 +14,10 @@ import {
   Download,
   X,
   MicOff,
+  BookOpen,
+  Tag,
+  Clock,
+  MessageSquare
 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { triggerHaptic } from "../../utils/haptics";
@@ -58,6 +62,30 @@ export function AIChatScreen({ onBack }: { onBack?: () => void }) {
   const recognitionRef = useRef<any>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"chat" | "insights">("chat");
+
+  // Insights Tags extraction hook
+  const insights = useMemo(() => {
+    return messages
+      .filter((m) => m.sender === "bot" && m.id !== 1 && m.text.length > 50)
+      .map((msg) => {
+        const text = msg.text.toLowerCase();
+        const tags: string[] = [];
+        if (text.includes("fever") || text.includes("تب")) tags.push(lang === "en" ? "Fever" : "تب");
+        if (text.includes("pain") || text.includes("درد")) tags.push(lang === "en" ? "Pain/Discomfort" : "درد");
+        if (text.includes("doctor") || text.includes("appointment") || text.includes("داکتر")) tags.push(lang === "en" ? "Consult Doctor" : "مراجعه به داکتر");
+        if (text.includes("water") || text.includes("hydration") || text.includes("آب")) tags.push(lang === "en" ? "Hydration" : "مایعات");
+        if (tags.length === 0) tags.push(lang === "en" ? "General Advice" : "توصیه عمومی");
+        
+        return {
+          ...msg,
+          tags: Array.from(new Set(tags))
+        };
+      })
+      .reverse();
+  }, [messages, lang]);
+
+  const [selectedTag, setSelectedTag] = useState<string>("All");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -336,14 +364,27 @@ Assistant:`;
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsSearching(!isSearching)}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              onClick={() => {
+                triggerHaptic("light");
+                setActiveTab(activeTab === "chat" ? "insights" : "chat");
+              }}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${activeTab === "insights" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+              title={lang === "en" ? "Past Insights" : "توصیه‌های قبلی"}
             >
-              <Search
-                size={20}
-                className="text-slate-600 dark:text-slate-400"
-              />
+              <BookOpen size={20} />
             </button>
+            {activeTab === "chat" && (
+              <button
+                onClick={() => setIsSearching(!isSearching)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                title={lang === "en" ? "Search Chat" : "جستجوی پیام"}
+              >
+                <Search
+                  size={20}
+                  className="text-slate-600 dark:text-slate-400"
+                />
+              </button>
+            )}
             <button
               onClick={handleExport}
               className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
@@ -357,7 +398,7 @@ Assistant:`;
           </div>
         </div>
 
-        {isSearching && (
+        {isSearching && activeTab === "chat" && (
           <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2">
             <div className="relative">
               <input
@@ -383,8 +424,65 @@ Assistant:`;
         )}
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 relative bg-slate-50 dark:bg-slate-900 transition-colors">
+      {activeTab === "insights" ? (
+        <div className="flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900 transition-colors">
+          <div className="flex items-center gap-2 mb-4 overflow-x-auto hide-scrollbar pb-2">
+            <button
+              onClick={() => setSelectedTag("All")}
+              className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTag === "All" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
+            >
+              {lang === "en" ? "All Insights" : "همه توصیه‌ها"}
+            </button>
+            {Array.from(new Set(insights.flatMap(i => i.tags))).map(tag => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(tag)}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${selectedTag === tag ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-4">
+            {insights.filter(i => selectedTag === "All" || i.tags.includes(selectedTag)).length === 0 ? (
+               <div className="text-center py-10 opacity-50 flex flex-col items-center">
+                 <Bot size={48} className="mb-4 text-slate-400" />
+                 <p className="text-slate-500 dark:text-slate-400">
+                   {lang === "en" ? "No insights found yet." : "هنوز توصیه‌ای ثبت نشده است."}
+                 </p>
+               </div>
+            ) : (
+              insights.filter(i => selectedTag === "All" || i.tags.includes(selectedTag)).map((insight) => (
+                <div key={insight.id} className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                      <Stethoscope size={16} className="text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex gap-1.5 flex-wrap mb-2">
+                        {insight.tags.map(tag => (
+                          <span key={tag} className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md text-[10px] font-medium">
+                            <Tag size={10} />
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{insight.text}</p>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-2 pt-2 border-t border-slate-50 dark:border-slate-700/50 justify-end">
+                    <Clock size={12} />
+                    {new Date(insight.id).toLocaleString(lang === 'en' ? 'en-US' : 'fa-IR', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 relative bg-slate-50 dark:bg-slate-900 transition-colors">
         {/* Optimization Notice */}
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-2.5 text-[11px] text-amber-700 dark:text-amber-400 text-center mx-auto w-3/4 shadow-sm z-10 transition-colors">
           {lang === "en"
@@ -450,66 +548,70 @@ Assistant:`;
       </div>
 
       {/* Input Area */}
-      <div className="bg-white dark:bg-slate-800 p-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-2 z-20 pb-safe transition-colors shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-        {/* Quick Replies */}
-        {!isTyping &&
-          messages.filter((m) => m.sender === "user").length < 2 && (
-            <div className="flex gap-2 mb-1 overflow-x-auto hide-scrollbar pb-1">
-              {quickReplies.map((reply, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSend(reply)}
-                  className="whitespace-nowrap bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full px-4 py-1.5 text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
-                >
-                  {reply}
-                </button>
-              ))}
-            </div>
-          )}
-        <div className="flex gap-2 items-end">
-          <button
-            onClick={toggleListening}
-            className={`w-12 h-12 flex items-center justify-center rounded-2xl shrink-0 transition-colors shadow-md border ${
-              isListening
-                ? "bg-rose-50 border-rose-200 text-rose-500 animate-pulse dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400"
-                : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-400"
-            }`}
-          >
-            {isListening ? <MicOff size={22} /> : <Mic size={22} />}
-          </button>
+      {activeTab === "chat" && (
+        <div className="bg-white dark:bg-slate-800 p-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-2 z-20 pb-safe transition-colors shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+          {/* Quick Replies */}
+          {!isTyping &&
+            messages.filter((m) => m.sender === "user").length < 2 && (
+              <div className="flex gap-2 mb-1 overflow-x-auto hide-scrollbar pb-1">
+                {quickReplies.map((reply, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSend(reply)}
+                    className="whitespace-nowrap bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full px-4 py-1.5 text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                  >
+                    {reply}
+                  </button>
+                ))}
+              </div>
+            )}
+          <div className="flex gap-2 items-end">
+            <button
+              onClick={toggleListening}
+              className={`w-12 h-12 flex items-center justify-center rounded-2xl shrink-0 transition-colors shadow-md border ${
+                isListening
+                  ? "bg-rose-50 border-rose-200 text-rose-500 animate-pulse dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400"
+                  : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-400"
+              }`}
+            >
+              {isListening ? <MicOff size={22} /> : <Mic size={22} />}
+            </button>
 
-          <textarea
-            placeholder={
-              isListening
-                ? lang === "en"
-                  ? "Listening..."
-                  : "در حال شنیدن..."
-                : t("chat_placeholder")
-            }
-            className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none h-14 min-h-[56px] max-h-[140px] text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors shadow-inner"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
+            <textarea
+              placeholder={
+                isListening
+                  ? lang === "en"
+                    ? "Listening..."
+                    : "در حال شنیدن..."
+                  : t("chat_placeholder")
               }
-            }}
-            dir={isRtl ? "rtl" : "ltr"}
-            disabled={isTyping}
-          />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isTyping}
-            className="w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-700 transition-all active:scale-95"
-          >
-            <Send
-              size={22}
-              className={`${isRtl ? "me-1 rtl:-scale-x-100" : "ms-1"}`}
+              className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none h-14 min-h-[56px] max-h-[140px] text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors shadow-inner"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              dir={isRtl ? "rtl" : "ltr"}
+              disabled={isTyping}
             />
-          </button>
+            <button
+              onClick={() => handleSend()}
+              disabled={!input.trim() || isTyping}
+              className="w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-700 transition-all active:scale-95"
+            >
+              <Send
+                size={22}
+                className={`${isRtl ? "me-1 rtl:-scale-x-100" : "ms-1"}`}
+              />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+        </>
+      )}
     </div>
   );
 }
